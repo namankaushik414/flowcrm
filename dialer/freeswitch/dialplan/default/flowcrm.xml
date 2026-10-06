@@ -1,0 +1,11 @@
+<include>
+  <extension name="flowcrm-test">
+    <condition field="destination_number" expression="^9999$">
+      <action application="answer"/>
+      <action application="sleep" data="1000"/>
+      <action application="playback" data="ivr/ivr-welcome_to_freeswitch.wav"/>
+      <action application="sleep" data="1000"/>
+      <action application="hangup" data="NORMAL_CLEARING"/>
+    </condition>
+  </extension>
+</include>
