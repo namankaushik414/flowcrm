@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: flowcrm
+      POSTGRES_PASSWORD: flowcrm
+      POSTGRES_DB: flowcrm_dialer
+    ports: ["5432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowcrm -d flowcrm_dialer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: redis:8-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  freeswitch:
+    image: signalwire/freeswitch:1.10.12
+    ports:
+      - "8021:8021"
+      - "5060:5060/udp"
+      - "16384-16484:16384-16484/udp"
+    volumes:
+      - ./freeswitch/autoload_configs/event_socket.conf.xml:/etc/freeswitch/autoload_configs/event_socket.conf.xml:ro
+      - ./freeswitch/dialplan/default/flowcrm.xml:/etc/freeswitch/dialplan/default/flowcrm.xml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "fs_cli -x 'status' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+  dialer:
+    build: .
+    env_file: [.env]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      freeswitch: {condition: service_healthy}
+    ports: ["8080:8080"]
+volumes:
+  postgres_data:
